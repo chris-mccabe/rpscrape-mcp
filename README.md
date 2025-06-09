@@ -1,3 +1,11 @@
+
+
+
+
+------
+
+### Original rpcrape DOCs
+
 # rpscrape
 
 Horse racing data has been hoarded by a few companies, enabling them to effectively extort the public for access to any worthwhile historical amount. Compared to other sports where historical data is easily and freely available to use and query as you please, racing data in most countries is far harder to come by and is often only available with subscriptions to expensive software.
@@ -19,6 +27,7 @@ The aim of this tool is to provide a way of gathering large amounts of historica
 - [Scrape Racecards](#scrape-racecards)
 - [Settings](#settings)
 - [Options](#options)
+- [Modern Workflow with MCP and DuckDB](#modern-workflow-with-mcp-and-duckdb)
 
 ## Requirements
 
@@ -213,3 +222,80 @@ q, quit, exit       Quit
 ```
 
 Tab complete for option keywords is available on Linux.
+
+
+#### Customizing Data Fields
+
+To customize which fields are scraped and processed, copy `settings/default_settings.toml` to `settings/user_settings.toml` and edit as needed. The user settings file is ignored by git and will override defaults.
+
+---
+
+## Modern Workflow with MCP and DuckDB
+
+For fun: This project now supports a modern workflow for working with racecards, predictions, and interactive querying using DuckDB and the Model Context Protocol (MCP).
+
+### 1. Setup Python Virtual Environment
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 2. Install Requirements
+
+```sh
+pip install -r requirements.txt
+```
+
+### 3. Pull the Latest Racecard
+
+From the `scripts/` directory, run:
+
+```sh
+cd scripts
+./racecards.py today
+```
+
+This will save a JSON file for today in the `racecards/` directory (e.g., `racecards/2025-06-09.json`).
+
+### 4. Process Racecard into DuckDB
+
+From the project root, run:
+
+```sh
+python racecard_process.py 2025-06-09
+```
+
+This will create or update `horsies.db` with the latest races and runners.
+
+### 5. Run the MCP Server
+
+From the project root, run:
+
+```sh
+python mcp_server.py --host 0.0.0.0 --port 8086
+```
+
+This will start the MCP server at `http://0.0.0.0:8086/sse`.
+
+### 6. Update Cursor Settings
+
+In your `.cursor/mcp.json` (or via the Cursor UI), ensure you have the following entry:
+
+```json
+"horses": {
+  "url": "http://0.0.0.0:8086/sse"
+}
+```
+
+### 7. Issue a Prompt
+
+You can now use Cursor's MCP integration to issue prompts like:
+
+> can you get the race card for the 2:25 at brighton use get_race_details
+> 
+> using this can you make a prediction on what horse will come first second and third?
+
+Or ask for predictions, analysis, or any supported tool function.
+
+---
